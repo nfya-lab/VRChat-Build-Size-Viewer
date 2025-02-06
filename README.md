@@ -1,10 +1,14 @@
-# VRChat Build Size Viewer
- A script for viewing the build size for VRC worlds and avatars after building.
- It's kinda ugly. So sorry about that. Made it for myself, but thought it might be handy for others!
+# VRC Build Size Viewer (Multi-OS & Multi-Language)
+This is a modified version of the original [MunifiSense/VRChat-Build-Size-Viewer](https://github.com/MunifiSense/VRChat-Build-Size-Viewer).
+
+## Changes
+- Added multi-OS support (Windows, macOS, Linux)
+- Added multi-language support (English, Japanese)
+- Improved UI
 
 ## How To Use
 - Just place the file [BuildSizeViewer.cs](https://github.com/MunifiSense/VRChat-Build-Size-Viewer/releases/download/1.2/BuildSizeViewer.cs) into your Unity project in Assets/Editor.  
-- Go to Window/Muni/VRC Build Size Viewer.  
+- Go to nfya/VRC Build Size Viewer.  
 - Then build a world or an avatar in Unity, either for testing or upload.  
 - Click Read Build Log.  
 - TADA.
