@@ -32,5 +32,5 @@ This is a modified version of the original [MunifiSense/VRChat-Build-Size-Viewer
 
 ---
 
-![JP Version](https://nfya.net/image/huh/JP_VRC_Build_Size_Viewer.png)
-![EN Version](https://nfya.net/image/huh/EN_VRC_Build_Size_Viewer.png)
+![JP Version](https://nfya.net/image/huh/[JP]VRC_Build_Size_Viewer.png)
+![EN Version](https://nfya.net/image/huh/[EN]VRC_Build_Size_Viewer.png)
