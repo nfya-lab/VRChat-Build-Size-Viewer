@@ -1,19 +1,25 @@
-﻿/**
- * VRC Build Size Viewer
+/**
+ * VRC Build Size Viewer (Multi-OS & Multi-Language)
  * Created by MunifiSense
+ * Updated for multi-OS & multi-language support by nfya
  * https://github.com/MunifiSense/VRChat-Build-Size-Viewer
+ * 
+ * Licensed under the MIT License.
  */
 
 #if UNITY_EDITOR
-using System.Collections;
 using System.Collections.Generic;
 using UnityEditor;
 using UnityEngine;
 using System.IO;
 
-public class BuildSizeViewer : EditorWindow {
+public class BuildSizeViewer : EditorWindow
+{
+    public enum Language { English, Japanese }
+    private static Language currentLanguage;
 
-    public class BuildObject {
+    public class BuildObject
+    {
         public string size;
         public string percent;
         public string path;
@@ -21,7 +27,7 @@ public class BuildSizeViewer : EditorWindow {
 
     List<BuildObject> buildObjectList;
     List<string> uncompressedList;
-    string buildLogPath = System.Environment.GetFolderPath(System.Environment.SpecialFolder.LocalApplicationData) + "/Unity/Editor/Editor.log";
+    string buildLogPath;
     private char[] delimiterChars = { ' ', '\t' };
     float win;
     float w1;
@@ -31,54 +37,82 @@ public class BuildSizeViewer : EditorWindow {
     bool buildLogFound = false;
     Vector2 scrollPos;
 
-    [MenuItem("Window/Muni/VRC Build Size Viewer")]
+    private static Dictionary<string, string> translations = new Dictionary<string, string>();
 
-    public static void ShowWindow() {
-        EditorWindow.GetWindow(typeof(BuildSizeViewer));
+    [MenuItem("nfya/VRC Build Size Viewer")]
+    public static void ShowWindow()
+    {
+        GetWindow<BuildSizeViewer>("VRC Build Size Viewer");
     }
 
-    void OnGUI() {
-        win = (float)(position.width * 0.6);
-        float w1 = (float)(win * 0.15);
-        float w2 = (float)(win * 0.15);
-        float w3 = (float)(win * 0.35);
-        EditorGUILayout.LabelField("VRC Build Size Viewer", EditorStyles.boldLabel);
-        EditorGUILayout.LabelField("Create a build of your world/avatar and click the button!", EditorStyles.label);
-        if (GUILayout.Button("Read Build Log")) {
+    private void OnEnable()
+    {
+        buildLogPath = getBuildLogPath();
+        currentLanguage = (Language)EditorPrefs.GetInt("BuildSizeViewer_Language", 0);
+        SetLanguage(currentLanguage);
+    }
+
+    private void OnGUI()
+    {
+        win = position.width * 0.6f;
+        w1 = win * 0.15f;
+        w2 = win * 0.15f;
+        w3 = win * 0.35f;
+
+        // 言語選択ドロップダウン
+        EditorGUILayout.BeginHorizontal();
+        EditorGUILayout.LabelField("Language:", GUILayout.Width(70));
+        Language newLanguage = (Language)EditorGUILayout.EnumPopup(currentLanguage);
+        EditorGUILayout.EndHorizontal();
+
+        if (newLanguage != currentLanguage)
+        {
+            currentLanguage = newLanguage;
+            EditorPrefs.SetInt("BuildSizeViewer_Language", (int)currentLanguage);
+            SetLanguage(currentLanguage);
+        }
+
+        EditorGUILayout.LabelField(translations["title"], EditorStyles.boldLabel);
+        EditorGUILayout.LabelField(translations["instruction"], EditorStyles.label);
+
+        if (GUILayout.Button(translations["read_log"]))
+        {
             buildLogFound = false;
             buildLogFound = getBuildSize();
         }
-        if (buildLogFound) {
-            if (uncompressedList != null && uncompressedList.Count != 0) {
-                EditorGUILayout.LabelField("Total Compressed Build Size: " + totalSize);
-                EditorGUILayout.BeginHorizontal();
-                EditorGUILayout.Separator();
-                EditorGUILayout.EndHorizontal();
-                //EditorGUILayout.LabelField("Uncompressed Build Size by Category: ");
-                foreach (string s in uncompressedList) {
+
+        if (buildLogFound)
+        {
+            if (uncompressedList != null && uncompressedList.Count != 0)
+            {
+                EditorGUILayout.LabelField(translations["total_size"] + ": " + totalSize);
+                foreach (string s in uncompressedList)
+                {
                     EditorGUILayout.LabelField(s);
                 }
             }
-            if (buildObjectList != null && buildObjectList.Count != 0) {
+
+            if (buildObjectList != null && buildObjectList.Count != 0)
+            {
                 scrollPos = EditorGUILayout.BeginScrollView(scrollPos);
+
                 EditorGUILayout.BeginHorizontal();
-                EditorGUILayout.Separator();
+                EditorGUILayout.LabelField(translations["size_percent"], GUILayout.Width(w1));
+                EditorGUILayout.LabelField(translations["size"], GUILayout.Width(w2));
+                EditorGUILayout.LabelField(translations["path"], GUILayout.Width(w3));
                 EditorGUILayout.EndHorizontal();
-                EditorGUILayout.BeginHorizontal();
-                EditorGUILayout.LabelField("Size%", GUILayout.Width(w1));
-                EditorGUILayout.LabelField("Size", GUILayout.Width(w2));
-                EditorGUILayout.LabelField("Path", GUILayout.Width(w3));
-                EditorGUILayout.EndHorizontal();
-                EditorGUILayout.BeginHorizontal();
-                EditorGUILayout.Separator();
-                EditorGUILayout.EndHorizontal();
-                foreach (BuildObject buildObject in buildObjectList) {
+
+                foreach (BuildObject buildObject in buildObjectList)
+                {
                     EditorGUILayout.BeginHorizontal();
                     EditorGUILayout.LabelField(buildObject.percent, GUILayout.Width(w1));
                     EditorGUILayout.LabelField(buildObject.size, GUILayout.Width(w2));
                     EditorGUILayout.LabelField(buildObject.path);
-                    if(buildObject.path != "Resources/unity_builtin_extra") {
-                        if (GUILayout.Button("Go", GUILayout.Width(w1))) {
+
+                    if (buildObject.path != "Resources/unity_builtin_extra")
+                    {
+                        if (GUILayout.Button(translations["go"], GUILayout.Width(w1)))
+                        {
                             UnityEngine.Object obj = AssetDatabase.LoadAssetAtPath(buildObject.path, typeof(UnityEngine.Object));
                             Selection.activeObject = obj;
                             EditorGUIUtility.PingObject(obj);
@@ -91,55 +125,121 @@ public class BuildSizeViewer : EditorWindow {
         }
     }
 
-    private bool getBuildSize() {
-        //Read the text from log
+    private bool getBuildSize()
+    {
+        if (!File.Exists(buildLogPath))
+        {
+            Debug.LogWarning(translations["log_not_found"] + ": " + buildLogPath);
+            return false;
+        }
+
         FileUtil.ReplaceFile(buildLogPath, buildLogPath + "copy");
         StreamReader reader = new StreamReader(buildLogPath + "copy");
 
-        if(reader == null) {
-            Debug.LogWarning("Could not read build file.");
+        if (reader == null)
+        {
+            Debug.LogWarning(translations["log_read_error"]);
             FileUtil.DeleteFileOrDirectory(buildLogPath + "copy");
             return false;
         }
 
         string line = reader.ReadLine();
-        while(line != null) {
+        while (line != null)
+        {
             if ((line.Contains("scene-") && line.Contains(".vrcw"))
-                || (line.Contains("avtr") && line.Contains(".prefab.unity3d"))) {
-                //Debug.Log("Build found!");
+                || (line.Contains("avtr") && line.Contains(".prefab.unity3d")))
+            {
                 buildObjectList = new List<BuildObject>();
                 uncompressedList = new List<string>();
+
                 line = reader.ReadLine();
-                //Debug.Log(line);
                 while (!line.Contains("Compressed Size"))
                 {
                     line = reader.ReadLine();
                 }
+
                 totalSize = line.Split(':')[1];
                 line = reader.ReadLine();
-                while (line != "Used Assets and files from the Resources folder, sorted by uncompressed size:") {
+
+                while (line != "Used Assets and files from the Resources folder, sorted by uncompressed size:")
+                {
                     uncompressedList.Add(line);
                     line = reader.ReadLine();
                 }
+
                 line = reader.ReadLine();
-                while (line != "-------------------------------------------------------------------------------") {
+                while (line != "-------------------------------------------------------------------------------")
+                {
                     string[] splitLine = line.Split(delimiterChars);
                     BuildObject temp = new BuildObject();
-                    temp.size = splitLine[1]+splitLine[2];
+                    temp.size = splitLine[1] + splitLine[2];
                     temp.percent = splitLine[4];
                     temp.path = splitLine[5];
-                    for (int i=6; i<splitLine.Length; i++) {
+
+                    for (int i = 6; i < splitLine.Length; i++)
+                    {
                         temp.path += (" " + splitLine[i]);
                     }
+
                     buildObjectList.Add(temp);
                     line = reader.ReadLine();
                 }
             }
             line = reader.ReadLine();
         }
+
         FileUtil.DeleteFileOrDirectory(buildLogPath + "copy");
         reader.Close();
         return true;
+    }
+
+    private string getBuildLogPath()
+    {
+        switch (Application.platform)
+        {
+            case RuntimePlatform.WindowsEditor:
+                return System.Environment.GetFolderPath(System.Environment.SpecialFolder.LocalApplicationData) + "/Unity/Editor/Editor.log";
+            case RuntimePlatform.OSXEditor:
+                return System.Environment.GetFolderPath(System.Environment.SpecialFolder.Personal) + "/Library/Logs/Unity/Editor.log";
+            case RuntimePlatform.LinuxEditor:
+                return System.Environment.GetFolderPath(System.Environment.SpecialFolder.Personal) + "/.config/unity3d/Editor.log";
+            default:
+                Debug.LogError(translations["unsupported_os"]);
+                return "";
+        }
+    }
+
+    private void SetLanguage(Language lang)
+    {
+        translations.Clear();
+        if (lang == Language.English)
+        {
+            translations["title"] = "VRC Build Size Viewer";
+            translations["instruction"] = "Create a build of your world/avatar and click the button!";
+            translations["read_log"] = "Read Build Log";
+            translations["total_size"] = "Total Compressed Build Size";
+            translations["size_percent"] = "Size%";
+            translations["size"] = "Size";
+            translations["path"] = "Path";
+            translations["go"] = "Go";
+            translations["log_not_found"] = "Could not find build log file";
+            translations["log_read_error"] = "Could not read build file";
+            translations["unsupported_os"] = "Unsupported OS for Build Log Viewer.";
+        }
+        else
+        {
+            translations["title"] = "VRC ビルドサイズビューア";
+            translations["instruction"] = "ワールドまたはアバターをビルドし、ボタンを押してください！";
+            translations["read_log"] = "ビルドログを読み取る";
+            translations["total_size"] = "圧縮後のビルドサイズ";
+            translations["size_percent"] = "サイズ%";
+            translations["size"] = "サイズ";
+            translations["path"] = "パス";
+            translations["go"] = "移動";
+            translations["log_not_found"] = "ビルドログファイルが見つかりません";
+            translations["log_read_error"] = "ビルドファイルを読み取れません";
+            translations["unsupported_os"] = "このOSは対応していません";
+        }
     }
 }
 #endif
